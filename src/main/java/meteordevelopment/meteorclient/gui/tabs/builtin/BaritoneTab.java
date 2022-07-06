@@ -6,7 +6,6 @@
 package meteordevelopment.meteorclient.gui.tabs.builtin;
 
 import baritone.api.BaritoneAPI;
-import baritone.api.Settings$Setting;
 import baritone.api.utils.SettingsUtil;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.tabs.Tab;
@@ -41,9 +40,8 @@ public class BaritoneTab extends Tab {
             Class<? extends baritone.api.Settings> klass = BaritoneAPI.getSettings().getClass();
             for (Field field : klass.getDeclaredFields()) {
                 Object obj = field.get(BaritoneAPI.getSettings());
-                if (!(obj instanceof baritone.api.Settings$Setting)) continue;
+                if (!(obj instanceof baritone.api.Settings.Setting setting)) continue;
 
-                Settings$Setting setting = (baritone.api.Settings$Setting<?>) obj;
                 Object value = setting.value;
 
                 if (value instanceof Boolean) {

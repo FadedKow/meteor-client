@@ -53,6 +53,13 @@ public class Zoom extends Module {
             .build()
     );
 
+    private final Setting<Boolean> renderHands = sgGeneral.add(new BoolSetting.Builder()
+        .name("show-hands")
+        .description("Whether or not to render your hands.")
+        .defaultValue(false)
+        .build()
+    );
+
     private boolean enabled;
     private boolean preCinematic;
     private double preMouseSensitivity;
@@ -69,9 +76,9 @@ public class Zoom extends Module {
     public void onActivate() {
         if (!enabled) {
             preCinematic = mc.options.smoothCameraEnabled;
-            preMouseSensitivity = mc.options.mouseSensitivity;
+            preMouseSensitivity = mc.options.getMouseSensitivity().getValue();
             value = zoom.get();
-            lastFov = mc.options.fov;
+            lastFov = mc.options.getFov().getValue();
             time = 0.001;
 
             MeteorClient.EVENT_BUS.subscribe(this);
@@ -81,7 +88,7 @@ public class Zoom extends Module {
 
     public void onStop() {
         mc.options.smoothCameraEnabled = preCinematic;
-        mc.options.mouseSensitivity = preMouseSensitivity;
+        mc.options.getMouseSensitivity().setValue(preMouseSensitivity);
 
         mc.worldRenderer.scheduleTerrainUpdate();
     }
@@ -91,7 +98,7 @@ public class Zoom extends Module {
         mc.options.smoothCameraEnabled = cinematic.get();
 
         if (!cinematic.get()) {
-            mc.options.mouseSensitivity = preMouseSensitivity / Math.max(value() * 0.5, 1);
+            mc.options.getMouseSensitivity().setValue(preMouseSensitivity / Math.max(value() * 0.5, 1));
         }
 
         if (time == 0) {
@@ -136,5 +143,9 @@ public class Zoom extends Module {
     private double value() {
         double delta = time < 0.5 ? 4 * time * time * time : 1 - Math.pow(-2 * time + 2, 3) / 2; // Ease in out cubic
         return MathHelper.lerp(delta, 1, value);
+    }
+
+    public boolean renderHands() {
+        return !isActive() || renderHands.get();
     }
 }

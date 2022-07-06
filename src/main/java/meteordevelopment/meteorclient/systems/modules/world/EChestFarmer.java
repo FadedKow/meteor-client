@@ -12,7 +12,6 @@ import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.systems.modules.Modules;
-import meteordevelopment.meteorclient.systems.modules.player.PacketMine;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.PlayerUtils;
@@ -66,7 +65,7 @@ public class EChestFarmer extends Module {
 
     private final Setting<Boolean> swingHand = sgRender.add(new BoolSetting.Builder()
         .name("swing-hand")
-        .description("Swing hand client side.")
+        .description("Swing hand client-side.")
         .defaultValue(true)
         .build()
     );
@@ -102,7 +101,7 @@ public class EChestFarmer extends Module {
     private final VoxelShape SHAPE = Block.createCuboidShape(1.0D, 0.0D, 1.0D, 15.0D, 14.0D, 15.0D);
 
     private BlockPos target;
-    private int startCount, prevSlot;
+    private int startCount;
 
     public EChestFarmer() {
         super(Categories.World, "echest-farmer", "Places and breaks EChests to farm obsidian.");
@@ -111,8 +110,7 @@ public class EChestFarmer extends Module {
     @Override
     public void onActivate() {
         target = null;
-        startCount = InvUtils.find(Items.OBSIDIAN).getCount();
-        prevSlot = mc.player.getInventory().selectedSlot;
+        startCount = InvUtils.find(Items.OBSIDIAN).count();
     }
 
     @Override
@@ -143,7 +141,7 @@ public class EChestFarmer extends Module {
         }
 
         // Toggle if obby amount reached
-        if (selfToggle.get() && InvUtils.find(Items.OBSIDIAN).getCount() - (ignoreExisting.get() ? startCount : 0) >= amount.get()) {
+        if (selfToggle.get() && InvUtils.find(Items.OBSIDIAN).count() - (ignoreExisting.get() ? startCount : 0) >= amount.get()) {
             InvUtils.swapBack();
             toggle();
             return;

@@ -35,9 +35,8 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.world.Dimension;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.DeathScreen;
-import net.minecraft.text.BaseText;
-import net.minecraft.text.LiteralText;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 
 import java.text.SimpleDateFormat;
@@ -49,7 +48,17 @@ import static meteordevelopment.meteorclient.utils.player.ChatUtils.formatCoords
 public class WaypointsModule extends Module {
     private static final Color GRAY = new Color(200, 200, 200);
 
+    private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgDeathPosition = settings.createGroup("Death Position");
+
+    public final Setting<Integer> textRenderDistance = sgGeneral.add(new IntSetting.Builder()
+        .name("text-render-distance")
+        .description("Maximum distance from the center of the screen at which text will be rendered.")
+        .defaultValue(100)
+        .min(0)
+        .sliderMax(200)
+        .build()
+    );
 
     private final Setting<Integer> maxDeathPositions = sgDeathPosition.add(new IntSetting.Builder()
         .name("max-death-positions")
@@ -84,7 +93,7 @@ public class WaypointsModule extends Module {
     public void addDeath(Vec3d deathPos) {
         String time = dateFormat.format(new Date());
         if (dpChat.get()) {
-            BaseText text = new LiteralText("Died at ");
+            MutableText text = Text.literal("Died at ");
             text.append(formatCoords(deathPos));
             text.append(String.format(" on %s.", time));
             info(text);
@@ -193,9 +202,7 @@ public class WaypointsModule extends Module {
                     if (mc.player == null || mc.world == null) return;
                     IBaritone baritone = BaritoneAPI.getProvider().getPrimaryBaritone();
                     if (baritone.getPathingBehavior().isPathing()) baritone.getPathingBehavior().cancelEverything();
-                    Vec3d vec = Waypoints.get().getCoords(waypoint);
-                    BlockPos pos = new BlockPos(vec.x, vec.y, vec.z);
-                    baritone.getCustomGoalProcess().setGoalAndPath(new GoalGetToBlock(pos));
+                    baritone.getCustomGoalProcess().setGoalAndPath(new GoalGetToBlock(waypoint.getCoords().toBlockPos()));
                 };
             }
 
@@ -262,7 +269,7 @@ public class WaypointsModule extends Module {
 
             // X
             table.add(theme.label("X:"));
-            WIntEdit x = theme.intEdit(waypoint.x, 0, Integer.MAX_VALUE, true);
+            WIntEdit x = theme.intEdit(waypoint.x, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
             x.noSlider = true;
             x.action = () -> waypoint.x = x.get();
             table.add(x).expandX();
@@ -270,11 +277,11 @@ public class WaypointsModule extends Module {
 
             // Y
             table.add(theme.label("Y:"));
-            WIntEdit y = theme.intEdit(waypoint.y, 0, Integer.MAX_VALUE, true);
+            WIntEdit y = theme.intEdit(waypoint.y, getMinHeight(), getMaxHeight(), true);
             y.noSlider = true;
             y.actionOnRelease = () -> {
-                if (y.get() < 0) y.set(0);
-                else if (y.get() > 255) y.set(255);
+                if (y.get() < getMinHeight()) y.set(getMinHeight());
+                else if (y.get() > getMaxHeight()) y.set(getMaxHeight());
 
                 waypoint.y = y.get();
             };
@@ -283,7 +290,7 @@ public class WaypointsModule extends Module {
 
             // Z
             table.add(theme.label("Z:"));
-            WIntEdit z = theme.intEdit(waypoint.z, 0, Integer.MAX_VALUE, true);
+            WIntEdit z = theme.intEdit(waypoint.z, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
             z.action = () -> waypoint.z = z.get();
             table.add(z).expandX();
             table.row();
@@ -307,6 +314,7 @@ public class WaypointsModule extends Module {
             table.add(theme.label("Scale:"));
             WDoubleEdit scale = table.add(theme.doubleEdit(waypoint.scale, 0, 4, 0, 4)).expandX().widget();
             scale.action = () -> waypoint.scale = scale.get();
+            table.row();
 
             table.add(theme.horizontalSeparator()).expandX();
             table.row();
@@ -341,7 +349,7 @@ public class WaypointsModule extends Module {
                 if (newWaypoint) Waypoints.get().add(waypoint);
                 else Waypoints.get().save();
 
-                onClose();
+                close();
             };
 
             enterAction = save.action;
@@ -351,6 +359,14 @@ public class WaypointsModule extends Module {
         protected void onClosed() {
             if (action != null) action.run();
         }
+    }
+
+    private Integer getMaxHeight() {
+        return mc.world.getDimension().height() - Math.abs(getMinHeight()) - 1;
+    }
+
+    private Integer getMinHeight() {
+        return mc.world.getDimension().minY();
     }
 
     private static class WIcon extends WWidget {

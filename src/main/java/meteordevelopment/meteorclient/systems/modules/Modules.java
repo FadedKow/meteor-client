@@ -6,6 +6,8 @@
 package meteordevelopment.meteorclient.systems.modules;
 
 import com.google.common.collect.Ordering;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Lifecycle;
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.game.GameJoinedEvent;
@@ -27,7 +29,6 @@ import meteordevelopment.meteorclient.systems.modules.movement.elytrafly.ElytraF
 import meteordevelopment.meteorclient.systems.modules.movement.speed.Speed;
 import meteordevelopment.meteorclient.systems.modules.player.*;
 import meteordevelopment.meteorclient.systems.modules.render.*;
-import meteordevelopment.meteorclient.systems.modules.render.hud.HUD;
 import meteordevelopment.meteorclient.systems.modules.render.marker.Marker;
 import meteordevelopment.meteorclient.systems.modules.render.search.Search;
 import meteordevelopment.meteorclient.systems.modules.world.Timer;
@@ -41,14 +42,20 @@ import meteordevelopment.orbit.EventPriority;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.tag.TagKey;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryEntry;
+import net.minecraft.util.registry.RegistryEntryList;
 import net.minecraft.util.registry.RegistryKey;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
@@ -56,7 +63,6 @@ public class Modules extends System<Modules> {
     public static final ModuleRegistry REGISTRY = new ModuleRegistry();
 
     private static final List<Category> CATEGORIES = new ArrayList<>();
-    public static boolean REGISTERING_CATEGORIES;
 
     private final List<Module> modules = new ArrayList<>();
     private final Map<Class<? extends Module>, Module> moduleInstances = new HashMap<>();
@@ -81,9 +87,17 @@ public class Modules extends System<Modules> {
         initRender();
         initWorld();
         initMisc();
+    }
 
-        // This is here because some hud elements depend on modules to be initialised before them
-        add(new HUD());
+    @Override
+    public void load(File folder) {
+        for (Module module : modules) {
+            for (SettingGroup group : module.settings) {
+                for (Setting<?> setting : group) setting.reset();
+            }
+        }
+
+        super.load(folder);
     }
 
     public void sortModules() {
@@ -362,6 +376,7 @@ public class Modules extends System<Modules> {
         add(new AutoAnvil());
         add(new AutoArmor());
         add(new AutoCity());
+        add(new AutoEXP());
         add(new AutoTotem());
         add(new AutoTrap());
         add(new AutoWeapon());
@@ -487,6 +502,7 @@ public class Modules extends System<Modules> {
         add(new Zoom());
         add(new Blur());
         add(new PopChams());
+        add(new TunnelESP());
     }
 
     private void initWorld() {
@@ -517,12 +533,12 @@ public class Modules extends System<Modules> {
 
     private void initMisc() {
         add(new Swarm());
-        add(new Announcer());
         add(new AntiPacketKick());
         add(new AutoClicker());
         add(new AutoLog());
         add(new AutoReconnect());
         add(new AutoRespawn());
+        add(new BetterBeacons());
         add(new BetterChat());
         add(new BetterTab());
         add(new BookBot());
@@ -535,14 +551,18 @@ public class Modules extends System<Modules> {
         add(new PacketCanceller());
         add(new SoundBlocker());
         add(new Spam());
-        add(new TPSSync());
-        add(new VanillaSpoof());
+        add(new ServerSpoof());
         add(new InventoryTweaks());
     }
 
     public static class ModuleRegistry extends Registry<Module> {
         public ModuleRegistry() {
             super(RegistryKey.ofRegistry(new Identifier("meteor-client", "modules")), Lifecycle.stable());
+        }
+
+        @Override
+        public int size() {
+            return Modules.get().getAll().size();
         }
 
         @Override
@@ -571,7 +591,7 @@ public class Modules extends System<Modules> {
         }
 
         @Override
-        protected Lifecycle getEntryLifecycle(Module object) {
+        public Lifecycle getEntryLifecycle(Module object) {
             return null;
         }
 
@@ -584,12 +604,6 @@ public class Modules extends System<Modules> {
         public Set<Identifier> getIds() {
             return null;
         }
-
-        @Override
-        public Set<Map.Entry<RegistryKey<Module>, Module>> getEntries() {
-            return null;
-        }
-
         @Override
         public boolean containsId(Identifier id) {
             return false;
@@ -606,15 +620,94 @@ public class Modules extends System<Modules> {
             return new ModuleIterator();
         }
 
-        @org.jetbrains.annotations.Nullable
         @Override
-        public Module getRandom(Random random) {
+        public boolean contains(RegistryKey<Module> key) {
+            return false;
+        }
+
+        @Override
+        public Set<Map.Entry<RegistryKey<Module>, Module>> getEntrySet() {
             return null;
         }
 
         @Override
-        public boolean contains(RegistryKey<Module> key) {
+        public Set<RegistryKey<Module>> getKeys() {
+            return null;
+        }
+
+        @Override
+        public Optional<RegistryEntry<Module>> getRandom(Random random) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Registry<Module> freeze() {
+            return null;
+        }
+
+        @Override
+        public RegistryEntry<Module> getOrCreateEntry(RegistryKey<Module> key) {
+            return null;
+        }
+
+        @Override
+        public DataResult<RegistryEntry<Module>> getOrCreateEntryDataResult(RegistryKey<Module> key) {
+            return null;
+        }
+
+        @Override
+        public RegistryEntry.Reference<Module> createEntry(Module value) {
+            return null;
+        }
+
+        @Override
+        public Optional<RegistryEntry<Module>> getEntry(int rawId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<RegistryEntry<Module>> getEntry(RegistryKey<Module> key) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Stream<RegistryEntry.Reference<Module>> streamEntries() {
+            return null;
+        }
+
+        @Override
+        public Optional<RegistryEntryList.Named<Module>> getEntryList(TagKey<Module> tag) {
+            return Optional.empty();
+        }
+
+        @Override
+        public RegistryEntryList.Named<Module> getOrCreateEntryList(TagKey<Module> tag) {
+            return null;
+        }
+
+        @Override
+        public Stream<Pair<TagKey<Module>, RegistryEntryList.Named<Module>>> streamTagsAndEntries() {
+            return null;
+        }
+
+        @Override
+        public Stream<TagKey<Module>> streamTags() {
+            return null;
+        }
+
+        @Override
+        public boolean containsTag(TagKey<Module> tag) {
             return false;
+        }
+
+        @Override
+        public void clearTags() {
+
+        }
+
+        @Override
+        public void populateTags(Map<TagKey<Module>, List<RegistryEntry<Module>>> tagEntries) {
+
         }
 
         private static class ModuleIterator implements Iterator<Module> {
@@ -631,5 +724,4 @@ public class Modules extends System<Modules> {
             }
         }
     }
-
 }

@@ -5,19 +5,23 @@
 
 package meteordevelopment.meteorclient.systems.modules.movement;
 
+import meteordevelopment.meteorclient.MeteorClient;
+import meteordevelopment.meteorclient.events.meteor.KeyEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.gui.WidgetScreen;
 import meteordevelopment.meteorclient.mixin.CreativeInventoryScreenAccessor;
+import meteordevelopment.meteorclient.mixin.KeyBindingAccessor;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
-import meteordevelopment.meteorclient.systems.modules.Modules;
-import meteordevelopment.meteorclient.systems.modules.render.Freecam;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.misc.input.Input;
+import meteordevelopment.meteorclient.utils.misc.input.KeyAction;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.*;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemGroup;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -43,7 +47,7 @@ public class GUIMove extends Module {
             .description("Allows you to jump while in GUIs.")
             .defaultValue(true)
             .onChanged(aBoolean -> {
-                if (isActive() && !aBoolean) mc.options.keyJump.setPressed(false);
+                if (isActive() && !aBoolean) set(mc.options.jumpKey, false);
             })
             .build()
     );
@@ -53,7 +57,7 @@ public class GUIMove extends Module {
             .description("Allows you to sneak while in GUIs.")
             .defaultValue(true)
             .onChanged(aBoolean -> {
-                if (isActive() && !aBoolean) mc.options.keySneak.setPressed(false);
+                if (isActive() && !aBoolean) set(mc.options.sneakKey, false);
             })
             .build()
     );
@@ -63,7 +67,7 @@ public class GUIMove extends Module {
             .description("Allows you to sprint while in GUIs.")
             .defaultValue(true)
             .onChanged(aBoolean -> {
-                if (isActive() && !aBoolean) mc.options.keySprint.setPressed(false);
+                if (isActive() && !aBoolean) set(mc.options.sprintKey, false);
             })
             .build()
     );
@@ -89,14 +93,14 @@ public class GUIMove extends Module {
 
     @Override
     public void onDeactivate() {
-        mc.options.keyForward.setPressed(false);
-        mc.options.keyBack.setPressed(false);
-        mc.options.keyLeft.setPressed(false);
-        mc.options.keyRight.setPressed(false);
+        set(mc.options.forwardKey, false);
+        set(mc.options.backKey, false);
+        set(mc.options.leftKey, false);
+        set(mc.options.rightKey, false);
 
-        if (jump.get()) mc.options.keyJump.setPressed(false);
-        if (sneak.get()) mc.options.keySneak.setPressed(false);
-        if (sprint.get()) mc.options.keySprint.setPressed(false);
+        if (jump.get()) set(mc.options.jumpKey, false);
+        if (sneak.get()) set(mc.options.sneakKey, false);
+        if (sprint.get()) set(mc.options.sprintKey, false);
     }
 
     @EventHandler
@@ -105,14 +109,14 @@ public class GUIMove extends Module {
         if (screens.get() == Screens.GUI && !(mc.currentScreen instanceof WidgetScreen)) return;
         if (screens.get() == Screens.Inventory && mc.currentScreen instanceof WidgetScreen) return;
 
-        mc.options.keyForward.setPressed(Input.isPressed(mc.options.keyForward));
-        mc.options.keyBack.setPressed(Input.isPressed(mc.options.keyBack));
-        mc.options.keyLeft.setPressed(Input.isPressed(mc.options.keyLeft));
-        mc.options.keyRight.setPressed(Input.isPressed(mc.options.keyRight));
+        set(mc.options.forwardKey, Input.isPressed(mc.options.forwardKey));
+        set(mc.options.backKey, Input.isPressed(mc.options.backKey));
+        set(mc.options.leftKey, Input.isPressed(mc.options.leftKey));
+        set(mc.options.rightKey, Input.isPressed(mc.options.rightKey));
 
-        if (jump.get()) mc.options.keyJump.setPressed(Input.isPressed(mc.options.keyJump));
-        if (sneak.get()) mc.options.keySneak.setPressed(Input.isPressed(mc.options.keySneak));
-        if (sprint.get()) mc.options.keySprint.setPressed(Input.isPressed(mc.options.keySprint));
+        if (jump.get()) set(mc.options.jumpKey, Input.isPressed(mc.options.jumpKey));
+        if (sneak.get()) set(mc.options.sneakKey, Input.isPressed(mc.options.sneakKey));
+        if (sprint.get()) set(mc.options.sprintKey, Input.isPressed(mc.options.sprintKey));
 
         if (arrowsRotate.get()) {
             float yaw = mc.player.getYaw();
@@ -132,7 +136,17 @@ public class GUIMove extends Module {
         }
     }
 
-    private boolean skip() {
-        return mc.currentScreen == null || Modules.get().isActive(Freecam.class) || (mc.currentScreen instanceof CreativeInventoryScreen && ((CreativeInventoryScreenAccessor) mc.currentScreen).getSelectedTab() == ItemGroup.SEARCH.getIndex()) || mc.currentScreen instanceof ChatScreen || mc.currentScreen instanceof SignEditScreen || mc.currentScreen instanceof AnvilScreen || mc.currentScreen instanceof AbstractCommandBlockScreen || mc.currentScreen instanceof StructureBlockScreen;
+    private void set(KeyBinding bind, boolean pressed) {
+        boolean wasPressed = bind.isPressed();
+        bind.setPressed(pressed);
+
+        InputUtil.Key key = ((KeyBindingAccessor) bind).getKey();
+        if (wasPressed != pressed && key.getCategory() == InputUtil.Type.KEYSYM) {
+            MeteorClient.EVENT_BUS.post(KeyEvent.get(key.getCode(), 0, pressed ? KeyAction.Press : KeyAction.Release));
+        }
+    }
+
+    public boolean skip() {
+        return mc.currentScreen == null || (mc.currentScreen instanceof CreativeInventoryScreen && CreativeInventoryScreenAccessor.getSelectedTab() == ItemGroup.SEARCH.getIndex()) || mc.currentScreen instanceof ChatScreen || mc.currentScreen instanceof SignEditScreen || mc.currentScreen instanceof AnvilScreen || mc.currentScreen instanceof AbstractCommandBlockScreen || mc.currentScreen instanceof StructureBlockScreen;
     }
 }

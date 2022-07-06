@@ -6,7 +6,7 @@ orbs:
 parameters:
   version:
     type: string
-    default: 0.4.7
+    default: 0.5.0
 
 general:
   branches:
@@ -15,7 +15,7 @@ general:
 jobs:
   build:
     docker:
-      - image: cimg/openjdk:16.0.0
+      - image: cimg/openjdk:17.0.0
 
     working_directory: ~/repo
 
@@ -27,7 +27,7 @@ jobs:
     steps:
       - checkout
 
-      - run: ./gradlew build
+      - run: ./gradlew build -Pcommit=<< pipeline.git.revision >>
       - run: ./gradlew publish
 
       - store_artifacts:
@@ -37,7 +37,7 @@ jobs:
           install-yarn: true
 
       - run:
-          name: Discord webhook
+          name: Upload file & Discord webhook
           command: |
             cd .circleci/discordwebhook
             yarn install

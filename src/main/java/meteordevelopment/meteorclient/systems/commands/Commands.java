@@ -13,13 +13,17 @@ import meteordevelopment.meteorclient.systems.Systems;
 import meteordevelopment.meteorclient.systems.commands.commands.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientCommandSource;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.CommandSource;
+import net.minecraft.util.registry.DynamicRegistryManager;
 
 import java.util.*;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
 public class Commands extends System<Commands> {
+    public static final CommandRegistryAccess REGISTRY_ACCESS = new CommandRegistryAccess(DynamicRegistryManager.BUILTIN.get());
+
     private final CommandDispatcher<CommandSource> DISPATCHER = new CommandDispatcher<>();
     private final CommandSource COMMAND_SOURCE = new ChatCommandSource(mc);
     private final List<Command> commands = new ArrayList<>();
@@ -38,7 +42,6 @@ public class Commands extends System<Commands> {
         add(new BaritoneCommand());
         add(new VClipCommand());
         add(new HClipCommand());
-        add(new ClearChatCommand());
         add(new DismountCommand());
         add(new DamageCommand());
         add(new DropCommand());
@@ -50,7 +53,6 @@ public class Commands extends System<Commands> {
         add(new LocateCommand());
         add(new NbtCommand());
         add(new NotebotCommand());
-        add(new PanicCommand());
         add(new PeekCommand());
         add(new ProfilesCommand());
         add(new ReloadCommand());
@@ -119,5 +121,4 @@ public class Commands extends System<Commands> {
     public <T extends Command> T get(Class<T> klass) {
         return (T) commandInstances.get(klass);
     }
-
 }

@@ -5,6 +5,7 @@
 
 package meteordevelopment.meteorclient.systems.modules.movement;
 
+import com.google.common.collect.Streams;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
@@ -21,14 +22,14 @@ public class Parkour extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if(!mc.player.isOnGround() || mc.options.keyJump.isPressed()) return;
+        if(!mc.player.isOnGround() || mc.options.jumpKey.isPressed()) return;
 
-        if(mc.player.isSneaking() || mc.options.keySneak.isPressed()) return;
+        if(mc.player.isSneaking() || mc.options.sneakKey.isPressed()) return;
 
         Box box = mc.player.getBoundingBox();
         Box adjustedBox = box.offset(0, -0.5, 0).expand(-0.001, 0, -0.001);
 
-        Stream<VoxelShape> blockCollisions = mc.world.getBlockCollisions(mc.player, adjustedBox);
+        Stream<VoxelShape> blockCollisions = Streams.stream(mc.world.getBlockCollisions(mc.player, adjustedBox));
 
         if(blockCollisions.findAny().isPresent()) return;
 

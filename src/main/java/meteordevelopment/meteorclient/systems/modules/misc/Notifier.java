@@ -24,8 +24,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
-import net.minecraft.text.LiteralText;
 import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.Random;
@@ -125,10 +125,10 @@ public class Notifier extends Module {
             }
         }
         else {
-            MutableText text = new LiteralText(event.entity.getType().getName().getString()).formatted(Formatting.WHITE);
-            text.append(new LiteralText(" has spawned at ").formatted(Formatting.GRAY));
+            MutableText text = Text.literal(event.entity.getType().getName().getString()).formatted(Formatting.WHITE);
+            text.append(Text.literal(" has spawned at ").formatted(Formatting.GRAY));
             text.append(formatCoords(event.entity.getPos()));
-            text.append(new LiteralText(".").formatted(Formatting.GRAY));
+            text.append(Text.literal(".").formatted(Formatting.GRAY));
             info(text);
         }
     }
@@ -142,10 +142,10 @@ public class Notifier extends Module {
                 ChatUtils.sendMsg(event.entity.getId() + 100, Formatting.GRAY, "(highlight)%s(default) has left your visual range!", event.entity.getEntityName());
             }
         } else {
-            MutableText text = new LiteralText(event.entity.getType().getName().getString()).formatted(Formatting.WHITE);
-            text.append(new LiteralText(" has despawned at ").formatted(Formatting.GRAY));
+            MutableText text = Text.literal(event.entity.getType().getName().getString()).formatted(Formatting.WHITE);
+            text.append(Text.literal(" has despawned at ").formatted(Formatting.GRAY));
             text.append(formatCoords(event.entity.getPos()));
-            text.append(new LiteralText(".").formatted(Formatting.GRAY));
+            text.append(Text.literal(".").formatted(Formatting.GRAY));
             info(text);
         }
     }
@@ -167,9 +167,8 @@ public class Notifier extends Module {
     @EventHandler
     private void onReceivePacket(PacketEvent.Receive event) {
         if (!totemPops.get()) return;
-        if (!(event.packet instanceof EntityStatusS2CPacket)) return;
+        if (!(event.packet instanceof EntityStatusS2CPacket p)) return;
 
-        EntityStatusS2CPacket p = (EntityStatusS2CPacket) event.packet;
         if (p.getStatus() != 35) return;
 
         Entity entity = p.getEntity(mc.world);
@@ -207,7 +206,7 @@ public class Notifier extends Module {
     }
 
     private int getChatId(Entity entity) {
-        return chatIdMap.computeIntIfAbsent(entity.getUuid(), value -> random.nextInt());
+        return chatIdMap.computeIfAbsent(entity.getUuid(), value -> random.nextInt());
     }
 
     public enum Event {

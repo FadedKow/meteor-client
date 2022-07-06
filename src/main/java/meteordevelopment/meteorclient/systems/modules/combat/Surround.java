@@ -79,7 +79,7 @@ public class Surround extends Module {
 
     private final Setting<Boolean> toggleOnYChange = sgGeneral.add(new BoolSetting.Builder()
         .name("toggle-on-y-change")
-        .description("Automatically disables when your y level (step, jumping, atc).")
+        .description("Automatically disables when your y level changes (step, jumping, etc).")
         .defaultValue(true)
         .build()
     );
@@ -131,21 +131,21 @@ public class Surround extends Module {
     private final Setting<SettingColor> safeColor = sgRender.add(new ColorSetting.Builder()
         .name("safe-color")
         .description("The color of safe blocks.")
-        .defaultValue(new SettingColor(13, 255, 0, 80))
+        .defaultValue(new SettingColor(13, 255, 0, 50))
         .build()
     );
 
     private final Setting<SettingColor> normalColor = sgRender.add(new ColorSetting.Builder()
         .name("normal-color")
         .description("The color of the normal surround blocks.")
-        .defaultValue(new SettingColor(0, 255, 238, 80))
+        .defaultValue(new SettingColor(0, 255, 238, 50))
         .build()
     );
 
     private final Setting<SettingColor> unSafeColor = sgRender.add(new ColorSetting.Builder()
         .name("unsafe-color")
         .description("The color of unsafe blocks.")
-        .defaultValue(new SettingColor(204, 0, 0, 80))
+        .defaultValue(new SettingColor(204, 0, 0, 50))
         .build()
     );
 

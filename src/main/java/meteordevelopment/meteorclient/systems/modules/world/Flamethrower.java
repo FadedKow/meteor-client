@@ -131,7 +131,7 @@ public class Flamethrower extends Module {
             mc.interactionManager.attackBlock(entity.getBlockPos().south(), Direction.DOWN);
         } else {
             if (ticks >= tickInterval.get() && !entity.isOnFire()) {
-                mc.interactionManager.interactBlock(mc.player, mc.world, Hand.MAIN_HAND, new BlockHitResult(
+                mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, new BlockHitResult(
                     entity.getPos().subtract(new Vec3d(0, 1, 0)), Direction.UP, entity.getBlockPos().down(), false));
                 ticks = 0;
             }
@@ -154,7 +154,7 @@ public class Flamethrower extends Module {
 
         boolean foundFlintAndSteel = !findNewFlintAndSteel;
         if (findNewFlintAndSteel) {
-            foundFlintAndSteel = InvUtils.swap(InvUtils.findInHotbar(itemStack -> (!antiBreak.get() || (antiBreak.get() && itemStack.getDamage() < itemStack.getMaxDamage() - 1)) && itemStack.getItem() == Items.FLINT_AND_STEEL).getSlot(), true);
+            foundFlintAndSteel = InvUtils.swap(InvUtils.findInHotbar(itemStack -> (!antiBreak.get() || (antiBreak.get() && itemStack.getDamage() < itemStack.getMaxDamage() - 1)) && itemStack.getItem() == Items.FLINT_AND_STEEL).slot(), true);
         }
         return foundFlintAndSteel;
     }

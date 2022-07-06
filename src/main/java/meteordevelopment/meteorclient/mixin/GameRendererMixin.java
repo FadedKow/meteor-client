@@ -17,6 +17,7 @@ import meteordevelopment.meteorclient.systems.modules.player.NoMiningTrace;
 import meteordevelopment.meteorclient.systems.modules.player.Reach;
 import meteordevelopment.meteorclient.systems.modules.render.Freecam;
 import meteordevelopment.meteorclient.systems.modules.render.NoRender;
+import meteordevelopment.meteorclient.systems.modules.render.Zoom;
 import meteordevelopment.meteorclient.systems.modules.world.HighwayBuilder;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.render.NametagUtils;
@@ -30,6 +31,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Matrix3f;
 import net.minecraft.util.math.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -50,8 +52,8 @@ public abstract class GameRendererMixin {
     @Shadow @Final private Camera camera;
     @Unique private Renderer3D renderer;
 
-    @Inject(method = "renderWorld", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiler/Profiler;swap(Ljava/lang/String;)V", args = { "ldc=hand" }), locals = LocalCapture.CAPTURE_FAILSOFT)
-    private void onRenderWorld(float tickDelta, long limitTime, MatrixStack matrices, CallbackInfo info, boolean bl, Camera camera, MatrixStack matrixStack, double d, Matrix4f matrix4f) {
+    @Inject(method = "renderWorld", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/util/profiler/Profiler;swap(Ljava/lang/String;)V", args = { "ldc=hand" }), locals = LocalCapture.CAPTURE_FAILEXCEPTION)
+    private void onRenderWorld(float tickDelta, long limitTime, MatrixStack matrices, CallbackInfo info, boolean bl, Camera camera, MatrixStack matrixStack, double d, float f, float g, Matrix4f matrix4f, Matrix3f matrix3f) {
         if (!Utils.canUpdate()) return;
 
         client.getProfiler().push("meteor-client_render");
@@ -166,9 +168,11 @@ public abstract class GameRendererMixin {
         }
     }
 
-    @Inject(method = "renderHand", at = @At("INVOKE"), cancellable = true)
+    @Inject(method = "renderHand", at = @At("HEAD"), cancellable = true)
     private void renderHand(MatrixStack matrices, Camera camera, float tickDelta, CallbackInfo info) {
-        if (!Modules.get().get(Freecam.class).renderHands()) info.cancel();
+        if (!Modules.get().get(Freecam.class).renderHands() ||
+            !Modules.get().get(Zoom.class).renderHands())
+            info.cancel();
     }
 
     @ModifyConstant(method = "updateTargetedEntity", constant = @Constant(doubleValue = 3))

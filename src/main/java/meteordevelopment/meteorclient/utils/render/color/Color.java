@@ -10,7 +10,23 @@ import meteordevelopment.meteorclient.utils.misc.ISerializable;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.math.Vec3d;
 
+@SuppressWarnings("unused")
 public class Color implements ICopyable<Color>, ISerializable<Color> {
+
+    public static final Color WHITE = new Color(java.awt.Color.WHITE);
+    public static final Color LIGHT_GRAY = new Color(java.awt.Color.LIGHT_GRAY);
+    public static final Color GRAY = new Color(java.awt.Color.GRAY);
+    public static final Color DARK_GRAY = new Color(java.awt.Color.DARK_GRAY);
+    public static final Color BLACK = new Color(java.awt.Color.BLACK);
+    public static final Color RED = new Color(java.awt.Color.RED);
+    public static final Color PINK = new Color(java.awt.Color.PINK);
+    public static final Color ORANGE = new Color(java.awt.Color.ORANGE);
+    public static final Color YELLOW = new Color(java.awt.Color.YELLOW);
+    public static final Color GREEN = new Color(java.awt.Color.GREEN);
+    public static final Color MAGENTA = new Color(java.awt.Color.MAGENTA);
+    public static final Color CYAN = new Color(java.awt.Color.CYAN);
+    public static final Color BLUE = new Color(java.awt.Color.BLUE);
+
     public int r, g, b, a;
 
     public Color() {
@@ -266,8 +282,22 @@ public class Color implements ICopyable<Color>, ISerializable<Color> {
         return r + " " + g + " " + b + " " + a;
     }
 
-    public boolean equals(Color color) {
-        if (color == null) return false;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Color color = (Color) o;
+
         return r == color.r && g == color.g && b == color.b && a == color.a;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = r;
+        result = 31 * result + g;
+        result = 31 * result + b;
+        result = 31 * result + a;
+        return result;
     }
 }

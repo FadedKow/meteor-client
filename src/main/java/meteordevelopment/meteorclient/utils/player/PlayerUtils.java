@@ -19,7 +19,6 @@ import meteordevelopment.meteorclient.utils.misc.text.TextUtils;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.world.Dimension;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BedBlockEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.network.PlayerListEntry;
@@ -48,8 +47,14 @@ public class PlayerUtils {
     private static final Color color = new Color();
 
     public static Color getPlayerColor(PlayerEntity entity, Color defaultColor) {
-        if (Friends.get().isFriend(entity)) return color.set(Friends.get().color).a(defaultColor.a);
-        if (!color.set(TextUtils.getMostPopularColor(entity.getDisplayName())).equals(WHITE) && Config.get().useTeamColor) return color.set(color).a(defaultColor.a);
+        if (Friends.get().isFriend(entity)) {
+            return color.set(Friends.get().color).a(defaultColor.a);
+        }
+
+        if (!color.set(TextUtils.getMostPopularColor(entity.getDisplayName())).equals(WHITE) && Config.get().useTeamColor.get()) {
+            return color.set(color).a(defaultColor.a);
+        }
+
         return defaultColor;
     }
 
@@ -157,7 +162,7 @@ public class PlayerUtils {
 
             BlockState state = mc.world.getBlockState(blockPos.offset(direction));
 
-            if (state.getBlock() != Blocks.BEDROCK && state.getBlock() != Blocks.OBSIDIAN) {
+            if (state.getBlock().getBlastResistance() < 600) {
                 if (!doubles || direction == Direction.DOWN) return false;
 
                 air++;
@@ -167,7 +172,7 @@ public class PlayerUtils {
 
                     BlockState blockState1 = mc.world.getBlockState(blockPos.offset(direction).offset(dir));
 
-                    if (blockState1.getBlock() != Blocks.BEDROCK && blockState1.getBlock() != Blocks.OBSIDIAN) {
+                    if (blockState1.getBlock().getBlastResistance() < 600) {
                         return false;
                     }
                 }

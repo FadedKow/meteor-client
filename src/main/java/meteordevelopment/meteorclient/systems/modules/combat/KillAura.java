@@ -7,7 +7,6 @@ package meteordevelopment.meteorclient.systems.modules.combat;
 
 import baritone.api.BaritoneAPI;
 import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
-import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
@@ -26,7 +25,11 @@ import meteordevelopment.orbit.EventHandler;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Tameable;
+import net.minecraft.entity.mob.EndermanEntity;
+import net.minecraft.entity.mob.ZombifiedPiglinEntity;
 import net.minecraft.entity.passive.AnimalEntity;
+import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
@@ -105,6 +108,20 @@ public class KillAura extends Module {
     );
 
     // Targeting
+    private final Setting<Boolean> ignorePassive = sgGeneral.add(new BoolSetting.Builder()
+        .name("ignore-passive")
+        .description("Will only attack sometimes passive mobs if they are targeting you.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Boolean> ignoreTamed = sgGeneral.add(new BoolSetting.Builder()
+        .name("ignore-tamed")
+        .description("Will avoid attacking mobs you tamed.")
+        .defaultValue(false)
+        .build()
+    );
+
 
     private final Setting<Object2BooleanMap<EntityType<?>>> entities = sgTargeting.add(new EntityTypeListSetting.Builder()
         .name("entities")
@@ -207,7 +224,7 @@ public class KillAura extends Module {
     );
 
     private final List<Entity> targets = new ArrayList<>();
-    private int hitDelayTimer, randomDelayTimer, switchTimer;
+    private int hitDelayTimer, switchTimer;
     private boolean wasPathing;
 
     public KillAura() {
@@ -217,7 +234,6 @@ public class KillAura extends Module {
     @Override
     public void onDeactivate() {
         hitDelayTimer = 0;
-        randomDelayTimer = 0;
         targets.clear();
     }
 
@@ -244,7 +260,7 @@ public class KillAura extends Module {
 
         if (rotation.get() == RotationMode.Always) rotate(primary, null);
 
-        if (onlyOnClick.get() && !mc.options.keyAttack.isPressed()) return;
+        if (onlyOnClick.get() && !mc.options.attackKey.isPressed()) return;
 
         if (onlyWhenLook.get()) {
             primary = mc.targetedEntity;
@@ -268,7 +284,7 @@ public class KillAura extends Module {
                 };
             });
 
-            InvUtils.swap(weaponResult.getSlot(), false);
+            InvUtils.swap(weaponResult.slot(), false);
         }
 
         if (!itemInHand()) return;
@@ -298,6 +314,17 @@ public class KillAura extends Module {
         if (!entities.get().getBoolean(entity.getType())) return false;
         if (!nametagged.get() && entity.hasCustomName()) return false;
         if (!PlayerUtils.canSeeEntity(entity) && PlayerUtils.distanceTo(entity) > wallsRange.get()) return false;
+        if (ignoreTamed.get()) {
+            if (entity instanceof Tameable tameable
+                && tameable.getOwnerUuid() != null
+                && tameable.getOwnerUuid().equals(mc.player.getUuid())
+            ) return false;
+        }
+        if (ignorePassive.get()) {
+            if (entity instanceof EndermanEntity enderman && !enderman.isAngryAt(mc.player)) return false;
+            if (entity instanceof ZombifiedPiglinEntity piglin && !piglin.isAngryAt(mc.player)) return false;
+            if (entity instanceof WolfEntity wolf && !wolf.isAttacking()) return false;
+        }
         if (entity instanceof PlayerEntity) {
             if (((PlayerEntity) entity).isCreative()) return false;
             if (!Friends.get().shouldAttack((PlayerEntity) entity)) return false;
@@ -311,26 +338,16 @@ public class KillAura extends Module {
             return false;
         }
 
-
         if (smartDelay.get()) return mc.player.getAttackCooldownProgress(0.5f) >= 1;
 
-        if (hitDelayTimer >= 0) {
+        if (hitDelayTimer > 0) {
             hitDelayTimer--;
             return false;
         } else {
             hitDelayTimer = hitDelay.get();
+            if (randomDelayEnabled.get()) hitDelayTimer += Math.round(Math.random() * randomDelayMax.get());
+            return true;
         }
-
-        if (randomDelayEnabled.get()) {
-            if (randomDelayTimer > 0) {
-                randomDelayTimer--;
-                return false;
-            } else {
-                randomDelayTimer = (int) Math.round(Math.random() * randomDelayMax.get());
-            }
-        }
-
-        return true;
     }
 
     private void attack(Entity target) {

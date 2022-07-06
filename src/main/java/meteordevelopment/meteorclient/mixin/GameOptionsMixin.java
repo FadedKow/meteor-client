@@ -7,6 +7,8 @@ package meteordevelopment.meteorclient.mixin;
 
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.game.ChangePerspectiveEvent;
+import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.systems.modules.render.Freecam;
 import meteordevelopment.meteorclient.utils.misc.input.KeyBinds;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.GameOptions;
@@ -25,11 +27,11 @@ import java.io.File;
 
 @Mixin(GameOptions.class)
 public class GameOptionsMixin {
-    @Shadow @Final @Mutable public KeyBinding[] keysAll;
+    @Shadow @Final @Mutable public KeyBinding[] allKeys;
 
-    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/option/GameOptions;keysAll:[Lnet/minecraft/client/option/KeyBinding;", opcode = Opcodes.PUTFIELD, shift = At.Shift.AFTER))
+    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/option/GameOptions;allKeys:[Lnet/minecraft/client/option/KeyBinding;", opcode = Opcodes.PUTFIELD, shift = At.Shift.AFTER))
     private void onInitAfterKeysAll(MinecraftClient client, File optionsFile, CallbackInfo info) {
-        keysAll = KeyBinds.apply(keysAll);
+        allKeys = KeyBinds.apply(allKeys);
     }
 
     @Inject(method = "setPerspective", at = @At("HEAD"), cancellable = true)
@@ -37,5 +39,7 @@ public class GameOptionsMixin {
         ChangePerspectiveEvent event = MeteorClient.EVENT_BUS.post(ChangePerspectiveEvent.get(perspective));
 
         if (event.isCancelled()) info.cancel();
+
+        if (Modules.get().isActive(Freecam.class)) info.cancel();
     }
 }

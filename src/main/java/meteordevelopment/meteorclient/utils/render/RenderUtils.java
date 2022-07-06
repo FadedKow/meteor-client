@@ -46,13 +46,13 @@ public class RenderUtils {
 
         Vec3d pos = new Vec3d(0, 0, 1);
 
-        if (mc.options.bobView) {
+        if (mc.options.getBobView().getValue()) {
             MatrixStack bobViewMatrices = new MatrixStack();
 
             bobView(bobViewMatrices);
-            bobViewMatrices.peek().getModel().invert();
+            bobViewMatrices.peek().getPositionMatrix().invert();
 
-            pos = ((IMatrix4f) (Object) bobViewMatrices.peek().getModel()).mul(pos);
+            pos = ((IMatrix4f) (Object) bobViewMatrices.peek().getPositionMatrix()).mul(pos);
         }
 
         center = new Vec3d(pos.x, -pos.y, pos.z)

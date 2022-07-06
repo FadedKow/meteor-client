@@ -7,7 +7,6 @@ package meteordevelopment.meteorclient.mixin;
 
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.entity.DamageEvent;
-import meteordevelopment.meteorclient.events.entity.TookDamageEvent;
 import meteordevelopment.meteorclient.events.entity.player.CanWalkOnFluidEvent;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.systems.modules.movement.AntiLevitation;
@@ -17,19 +16,17 @@ import meteordevelopment.meteorclient.systems.modules.render.NoRender;
 import meteordevelopment.meteorclient.utils.Utils;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.fluid.Fluid;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -43,18 +40,13 @@ public abstract class LivingEntityMixin extends Entity {
 
     @Inject(method = "damage", at = @At("HEAD"))
     private void onDamageHead(DamageSource source, float amount, CallbackInfoReturnable<Boolean> info) {
-        if (Utils.canUpdate()) MeteorClient.EVENT_BUS.post(DamageEvent.get((LivingEntity) (Object) this, source));
-    }
-
-    @Inject(method = "damage", at = @At("TAIL"))
-    private void onDamageTail(DamageSource source, float amount, CallbackInfoReturnable<Boolean> info) {
-        if (Utils.canUpdate()) MeteorClient.EVENT_BUS.post(TookDamageEvent.get((LivingEntity) (Object) this, source));
+        if (Utils.canUpdate() && world.isClient) MeteorClient.EVENT_BUS.post(DamageEvent.get((LivingEntity) (Object) this, source));
     }
 
     @Inject(method = "canWalkOnFluid", at = @At("HEAD"), cancellable = true)
-    private void onCanWalkOnFluid(Fluid fluid, CallbackInfoReturnable<Boolean> info) {
+    private void onCanWalkOnFluid(FluidState fluidState, CallbackInfoReturnable<Boolean> info) {
         if ((Object) this != mc.player) return;
-        CanWalkOnFluidEvent event = MeteorClient.EVENT_BUS.post(CanWalkOnFluidEvent.get(fluid));
+        CanWalkOnFluidEvent event = MeteorClient.EVENT_BUS.post(CanWalkOnFluidEvent.get(fluidState));
 
         info.setReturnValue(event.walkOnFluid);
     }
@@ -80,7 +72,7 @@ public abstract class LivingEntityMixin extends Entity {
     }
 
     @Inject(method = "onEquipStack", at = @At("HEAD"), cancellable = true)
-    private void onEquipStack(ItemStack stack, CallbackInfo info) {
+    private void onEquipStack(EquipmentSlot slot, ItemStack oldStack, ItemStack newStack, CallbackInfo info) {
         if ((Object) this == mc.player && Modules.get().get(OffhandCrash.class).isAntiCrash()) {
             info.cancel();
         }
@@ -94,5 +86,11 @@ public abstract class LivingEntityMixin extends Entity {
             return handView.swingMode.get() == HandView.SwingMode.Offhand ? Hand.OFF_HAND : Hand.MAIN_HAND;
         }
         return hand;
+    }
+
+    @ModifyConstant(method = "getHandSwingDuration", constant = @Constant(intValue = 6))
+    private int getHandSwingDuration(int constant) {
+        if ((Object) this != mc.player) return constant;
+        return Modules.get().get(HandView.class).isActive() && mc.options.getPerspective().isFirstPerson() ? Modules.get().get(HandView.class).swingSpeed.get() : constant;
     }
 }

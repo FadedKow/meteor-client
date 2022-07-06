@@ -17,7 +17,9 @@ import java.net.Proxy;
 @Mixin(MinecraftClient.class)
 public interface MinecraftClientAccessor {
     @Accessor("currentFps")
-    int getFps();
+    static int getFps() {
+        return 0;
+    }
 
     @Mutable
     @Accessor("session")
@@ -33,5 +35,5 @@ public interface MinecraftClientAccessor {
     int getItemUseCooldown();
 
     @Invoker("doAttack")
-    void leftClick();
+    boolean leftClick();
 }

@@ -102,7 +102,7 @@ public class LogoutSpots extends Module {
 
     public LogoutSpots() {
         super(Categories.Render, "logout-spots", "Displays a box where another player has logged out at.");
-        lineColor.changed();
+        lineColor.onChanged();
     }
 
     @Override
@@ -230,7 +230,7 @@ public class LogoutSpots extends Module {
         }
 
         public void render2D() {
-            if (PlayerUtils.distanceToCamera(x, y, z) > mc.options.viewDistance * 16) return;
+            if (PlayerUtils.distanceToCamera(x, y, z) > mc.options.getViewDistance().getValue() * 16) return;
 
             TextRenderer text = TextRenderer.get();
             double scale = LogoutSpots.this.scale.get();

@@ -9,7 +9,6 @@ import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.gui.renderer.GuiDebugRenderer;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
-import meteordevelopment.meteorclient.gui.tabs.builtin.HudTab;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WRoot;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
@@ -21,7 +20,7 @@ import meteordevelopment.meteorclient.utils.misc.input.Input;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static meteordevelopment.meteorclient.utils.Utils.*;
 import static meteordevelopment.meteorclient.MeteorClient.mc;
+import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
+import static meteordevelopment.meteorclient.utils.Utils.getWindowWidth;
 import static org.lwjgl.glfw.GLFW.*;
 
 public abstract class WidgetScreen extends Screen {
@@ -40,12 +40,12 @@ public abstract class WidgetScreen extends Screen {
     public Runnable taskAfterRender;
     protected Runnable enterAction;
 
-    protected Screen parent;
+    public Screen parent;
     private final WContainer root;
 
     protected final GuiTheme theme;
 
-    public boolean locked;
+    public boolean locked, lockedAllowClose;
     private boolean closed;
     private boolean onClose;
     private boolean debug;
@@ -56,10 +56,10 @@ public abstract class WidgetScreen extends Screen {
 
     private List<Runnable> onClosed;
 
-    private boolean firstInit = true;
+    protected boolean firstInit = true;
 
     public WidgetScreen(GuiTheme theme, String title) {
-        super(new LiteralText(title));
+        super(Text.literal(title));
 
         this.parent = mc.currentScreen;
         this.root = new WFullScreenRoot();
@@ -70,7 +70,7 @@ public abstract class WidgetScreen extends Screen {
         if (parent != null) {
             animProgress = 1;
 
-            if (this instanceof TabScreen && parent instanceof TabScreen && !(this instanceof HudTab.HudScreen)) {
+            if (this instanceof TabScreen && parent instanceof TabScreen) {
                 parent = ((TabScreen) parent).parent;
             }
         }
@@ -91,7 +91,7 @@ public abstract class WidgetScreen extends Screen {
     @Override
     protected void init() {
         MeteorClient.EVENT_BUS.subscribe(this);
-        if (theme.hideHUD()) mc.options.hudHidden = true;
+
         closed = false;
 
         if (firstInit) {
@@ -295,12 +295,10 @@ public abstract class WidgetScreen extends Screen {
     }
 
     @Override
-    public void onClose() {
-        if (!locked) {
+    public void close() {
+        if (!locked || lockedAllowClose) {
             boolean preOnClose = onClose;
             onClose = true;
-
-            if (theme.hideHUD() && !(parent instanceof WidgetScreen)) mc.options.hudHidden = false;
 
             removed();
 
@@ -310,7 +308,7 @@ public abstract class WidgetScreen extends Screen {
 
     @Override
     public void removed() {
-        if (!closed) {
+        if (!closed || lockedAllowClose) {
             closed = true;
             onClosed();
 
@@ -359,11 +357,11 @@ public abstract class WidgetScreen extends Screen {
 
     @Override
     public boolean shouldCloseOnEsc() {
-        return !locked;
+        return !locked || lockedAllowClose;
     }
 
     @Override
-    public boolean isPauseScreen() {
+    public boolean shouldPause() {
         return false;
     }
 

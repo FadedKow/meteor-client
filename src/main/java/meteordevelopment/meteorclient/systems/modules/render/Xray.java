@@ -8,12 +8,11 @@ package meteordevelopment.meteorclient.systems.modules.render;
 import meteordevelopment.meteorclient.events.render.RenderBlockEntityEvent;
 import meteordevelopment.meteorclient.events.world.AmbientOcclusionEvent;
 import meteordevelopment.meteorclient.events.world.ChunkOcclusionEvent;
-import meteordevelopment.meteorclient.settings.BlockListSetting;
-import meteordevelopment.meteorclient.settings.IntSetting;
-import meteordevelopment.meteorclient.settings.Setting;
-import meteordevelopment.meteorclient.settings.SettingGroup;
+import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -61,8 +60,8 @@ public class Xray extends Module {
     public final Setting<Integer> opacity = sgGeneral.add(new IntSetting.Builder()
         .name("opacity")
         .description("The opacity for all other blocks.")
-        .defaultValue(1)
-        .range(1, 255)
+        .defaultValue(25)
+        .range(0, 255)
         .sliderMax(255)
         .onChanged(onChanged -> {
             if (isActive()) mc.worldRenderer.reload();
@@ -70,27 +69,32 @@ public class Xray extends Module {
         .build()
     );
 
+    private final Setting<Boolean> exposedOnly = sgGeneral.add(new BoolSetting.Builder()
+        .name("exposed only")
+        .description("Show only exposed ores.")
+        .defaultValue(false)
+        .onChanged(onChanged -> {
+            if (isActive()) mc.worldRenderer.reload();
+        })
+        .build());
+
     public Xray() {
         super(Categories.Render, "xray", "Only renders specified blocks. Good for mining.");
     }
 
     @Override
     public void onActivate() {
-        Fullbright.enable();
-
         mc.worldRenderer.reload();
     }
 
     @Override
     public void onDeactivate() {
-        Fullbright.disable();
-
         mc.worldRenderer.reload();
     }
 
     @EventHandler
     private void onRenderBlockEntity(RenderBlockEntityEvent event) {
-        if (isBlocked(event.blockEntity.getCachedState().getBlock())) event.cancel();
+        if (isBlocked(event.blockEntity.getCachedState().getBlock(), event.blockEntity.getPos())) event.cancel();
     }
 
     @EventHandler
@@ -104,16 +108,35 @@ public class Xray extends Module {
     }
 
     public boolean modifyDrawSide(BlockState state, BlockView view, BlockPos pos, Direction facing, boolean returns) {
-        if (!returns && !isBlocked(state.getBlock())) {
+        if (!returns && !isBlocked(state.getBlock(), pos)) {
             BlockPos adjPos = pos.offset(facing);
             BlockState adjState = view.getBlockState(adjPos);
-            return adjState.getCullingFace(view, adjPos, facing.getOpposite()) != VoxelShapes.fullCube() || adjState.getBlock() != state.getBlock();
+            return adjState.getCullingFace(view , adjPos,  facing.getOpposite()) != VoxelShapes.fullCube() || adjState.getBlock() != state.getBlock() || BlockUtils.isExposed(adjPos);
         }
 
         return returns;
     }
 
-    public boolean isBlocked(Block block) {
-        return !blocks.get().contains(block);
+    public boolean isBlocked(Block block, BlockPos blockPos) {
+        return !(blocks.get().contains(block) && (!exposedOnly.get() || (blockPos == null || BlockUtils.isExposed(blockPos))));
+    }
+
+    public static int getAlpha(BlockState state, BlockPos pos) {
+        WallHack wallHack = Modules.get().get(WallHack.class);
+        Xray xray = Modules.get().get(Xray.class);
+
+        if (wallHack.isActive() && wallHack.blocks.get().contains(state.getBlock())) {
+            int alpha;
+
+            if (xray.isActive()) alpha = xray.opacity.get();
+            else alpha = wallHack.opacity.get();
+
+            return alpha;
+        }
+        else if (xray.isActive() && !wallHack.isActive() && xray.isBlocked(state.getBlock(), pos)) {
+            return xray.opacity.get();
+        }
+
+        return -1;
     }
 }

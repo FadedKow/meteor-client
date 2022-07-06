@@ -11,7 +11,6 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 import net.minecraft.client.util.math.MatrixStack;
 import org.lwjgl.BufferUtils;
 
-import java.io.File;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
@@ -20,6 +19,8 @@ public class CustomTextRenderer implements TextRenderer {
 
     private final Mesh mesh = new ShaderMesh(Shaders.TEXT, DrawMode.Triangles, Mesh.Attrib.Vec2, Mesh.Attrib.Vec2, Mesh.Attrib.Color);
 
+    public final FontFace fontFace;
+
     private final Font[] fonts;
     private Font font;
 
@@ -27,8 +28,10 @@ public class CustomTextRenderer implements TextRenderer {
     private boolean scaleOnly;
     private double scale = 1;
 
-    public CustomTextRenderer(File file) {
-        byte[] bytes = Utils.readBytes(file);
+    public CustomTextRenderer(FontFace fontFace) {
+        this.fontFace = fontFace;
+
+        byte[] bytes = Utils.readBytes(fontFace.asStream());
         ByteBuffer buffer = BufferUtils.createByteBuffer(bytes.length).put(bytes);
 
         fonts = new Font[5];
@@ -91,8 +94,13 @@ public class CustomTextRenderer implements TextRenderer {
 
         double width;
         if (shadow) {
+            int preShadowA = SHADOW_COLOR.a;
+            SHADOW_COLOR.a = (int) (color.a / 255.0 * preShadowA);
+
             width = font.render(mesh, text, x + 1, y + 1, SHADOW_COLOR, scale);
             font.render(mesh, text, x, y, color, scale);
+
+            SHADOW_COLOR.a = preShadowA;
         }
         else {
             width = font.render(mesh, text, x, y, color, scale);

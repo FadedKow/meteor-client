@@ -389,7 +389,7 @@ public class CrystalAura extends Module {
 
     private final Setting<Boolean> renderSwing = sgRender.add(new BoolSetting.Builder()
         .name("swing")
-        .description("Renders hand swinging client side.")
+        .description("Renders hand swinging client-side.")
         .defaultValue(true)
         .build()
     );
@@ -723,7 +723,7 @@ public class CrystalAura extends Module {
                 // Check if the item in your hand is already valid
                 if (!isValidWeaknessItem(mc.player.getMainHandStack())) {
                     // Find valid item to break with
-                    if (!InvUtils.swap(InvUtils.findInHotbar(this::isValidWeaknessItem).getSlot(), false)) return;
+                    if (!InvUtils.swap(InvUtils.findInHotbar(this::isValidWeaknessItem).slot(), false)) return;
 
                     switchTimer = 1;
                     return;
@@ -922,7 +922,7 @@ public class CrystalAura extends Module {
 
         int prevSlot = mc.player.getInventory().selectedSlot;
 
-        if (autoSwitch.get() != AutoSwitchMode.None && !item.isOffhand()) InvUtils.swap(item.getSlot(), false);
+        if (autoSwitch.get() != AutoSwitchMode.None && !item.isOffhand()) InvUtils.swap(item.slot(), false);
 
         Hand hand = item.getHand();
         if (hand == null) return;
@@ -930,7 +930,7 @@ public class CrystalAura extends Module {
         // Place
         if (supportBlock == null) {
             // Place crystal
-            mc.player.networkHandler.sendPacket(new PlayerInteractBlockC2SPacket(hand, result));
+            mc.player.networkHandler.sendPacket(new PlayerInteractBlockC2SPacket(hand, result, 0));
 
             if (renderSwing.get()) mc.player.swingHand(hand);
             else mc.getNetworkHandler().sendPacket(new HandSwingC2SPacket(hand));

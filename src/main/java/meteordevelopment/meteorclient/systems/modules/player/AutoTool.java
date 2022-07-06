@@ -11,16 +11,21 @@ import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.systems.modules.world.InfinityMiner;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
 import meteordevelopment.orbit.EventPriority;
+import net.minecraft.block.BambooBlock;
+import net.minecraft.block.BambooSaplingBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ShearsItem;
+import net.minecraft.item.SwordItem;
 import net.minecraft.item.ToolItem;
 
 import java.util.function.Predicate;
@@ -84,7 +89,9 @@ public class AutoTool extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if (switchBack.get() && !mc.options.keyAttack.isPressed() && wasPressed && InvUtils.previousSlot != -1) {
+        if (Modules.get().isActive(InfinityMiner.class)) return;
+
+        if (switchBack.get() && !mc.options.attackKey.isPressed() && wasPressed && InvUtils.previousSlot != -1) {
             InvUtils.swapBack();
             wasPressed = false;
             return;
@@ -97,11 +104,13 @@ public class AutoTool extends Module {
             ticks--;
         }
 
-        wasPressed = mc.options.keyAttack.isPressed();
+        wasPressed = mc.options.attackKey.isPressed();
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     private void onStartBreakingBlock(StartBreakingBlockEvent event) {
+        if (Modules.get().isActive(InfinityMiner.class)) return;
+
         // Get blockState
         BlockState blockState = mc.world.getBlockState(event.blockPos);
         if (!BlockUtils.canBreak(event.blockPos, blockState)) return;
@@ -133,7 +142,7 @@ public class AutoTool extends Module {
         currentStack = mc.player.getMainHandStack();
 
         if (shouldStopUsing(currentStack) && isTool(currentStack)) {
-            mc.options.keyAttack.setPressed(false);
+            mc.options.attackKey.setPressed(false);
             event.setCancelled(true);
         }
     }
@@ -160,6 +169,10 @@ public class AutoTool extends Module {
 
         if (enchantPreference == EnchantPreference.Fortune) score += EnchantmentHelper.getLevel(Enchantments.FORTUNE, itemStack);
         if (enchantPreference == EnchantPreference.SilkTouch) score += EnchantmentHelper.getLevel(Enchantments.SILK_TOUCH, itemStack);
+
+        if (itemStack.getItem() instanceof SwordItem item && (state.getBlock() instanceof BambooBlock || state.getBlock() instanceof BambooSaplingBlock))
+            score += 9000 + (item.getMaterial().getMiningLevel() * 1000);
+
 
         return score;
     }

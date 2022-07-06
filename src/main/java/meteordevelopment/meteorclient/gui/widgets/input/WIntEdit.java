@@ -78,7 +78,7 @@ public class WIntEdit extends WHorizontalList {
         boolean good;
         boolean validate = true;
 
-        if (c == '-' && text.isEmpty()) {
+        if (c == '-' && !text.contains("-") && textBox.cursor == 0) {
             good = true;
             validate = false;
         }

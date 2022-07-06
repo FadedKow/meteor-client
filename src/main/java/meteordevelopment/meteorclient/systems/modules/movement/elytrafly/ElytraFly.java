@@ -31,6 +31,7 @@ import net.minecraft.world.RaycastContext;
 
 public class ElytraFly extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
+    private final SettingGroup sgInventory = settings.createGroup("Inventory");
     private final SettingGroup sgAutopilot = settings.createGroup("Autopilot");
 
     // General
@@ -49,22 +50,6 @@ public class ElytraFly extends Module {
         .description("Automatically takes off when you hold jump without needing to double jump.")
         .defaultValue(false)
         .visible(() -> flightMode.get() != ElytraFlightModes.Pitch40)
-        .build()
-    );
-
-    public final Setting<Boolean> replace = sgGeneral.add(new BoolSetting.Builder()
-        .name("elytra-replace")
-        .description("Replaces broken elytra with a new elytra.")
-        .defaultValue(false)
-        .build()
-    );
-
-    public final Setting<Integer> replaceDurability = sgGeneral.add(new IntSetting.Builder()
-        .name("replace-durability")
-        .description("The durability threshold your elytra will be replaced at.")
-        .defaultValue(2)
-        .range(1, Items.ELYTRA.getMaxDamage() - 1)
-        .sliderRange(1, Items.ELYTRA.getMaxDamage() - 1)
         .build()
     );
 
@@ -126,13 +111,6 @@ public class ElytraFly extends Module {
         .build()
     );
 
-    public final Setting<ChestSwapMode> chestSwap = sgGeneral.add(new EnumSetting.Builder<ChestSwapMode>()
-        .name("chest-swap")
-        .description("Enables ChestSwap when toggling this module.")
-        .defaultValue(ChestSwapMode.Never)
-        .build()
-    );
-
     private final Setting<Boolean> instaDrop = sgGeneral.add(new BoolSetting.Builder()
         .name("insta-drop")
         .description("Makes you drop out of flight instantly.")
@@ -167,6 +145,49 @@ public class ElytraFly extends Module {
         .min(0)
         .sliderMax(6)
         .visible(() -> flightMode.get() == ElytraFlightModes.Pitch40)
+        .build()
+    );
+
+    // Inventory
+
+    public final Setting<Boolean> replace = sgInventory.add(new BoolSetting.Builder()
+        .name("elytra-replace")
+        .description("Replaces broken elytra with a new elytra.")
+        .defaultValue(false)
+        .build()
+    );
+
+    public final Setting<Integer> replaceDurability = sgInventory.add(new IntSetting.Builder()
+        .name("replace-durability")
+        .description("The durability threshold your elytra will be replaced at.")
+        .defaultValue(2)
+        .range(1, Items.ELYTRA.getMaxDamage() - 1)
+        .sliderRange(1, Items.ELYTRA.getMaxDamage() - 1)
+        .visible(replace::get)
+        .build()
+    );
+
+    public final Setting<ChestSwapMode> chestSwap = sgInventory.add(new EnumSetting.Builder<ChestSwapMode>()
+        .name("chest-swap")
+        .description("Enables ChestSwap when toggling this module.")
+        .defaultValue(ChestSwapMode.Never)
+        .build()
+    );
+
+    public final Setting<Boolean> autoReplenish = sgInventory.add(new BoolSetting.Builder()
+        .name("replenish-fireworks")
+        .description("Moves fireworks into a selected hotbar slot.")
+        .defaultValue(false)
+        .build()
+    );
+
+    public final Setting<Integer> replenishSlot = sgInventory.add(new IntSetting.Builder()
+        .name("replenish-slot")
+        .description("The slot auto move moves fireworks to.")
+        .defaultValue(9)
+        .range(1, 9)
+        .sliderRange(1, 9)
+        .visible(autoReplenish::get)
         .build()
     );
 
@@ -208,7 +229,7 @@ public class ElytraFly extends Module {
         .build()
     );
 
-    private ElytraFlightMode currentMode;
+    private ElytraFlightMode currentMode = new Vanilla();
 
     public ElytraFly() {
         super(Categories.Movement, "elytra-fly", "Gives you more control over your elytra.");
@@ -225,7 +246,7 @@ public class ElytraFly extends Module {
 
     @Override
     public void onDeactivate() {
-        if (autoPilot.get()) mc.options.keyForward.setPressed(false);
+        if (autoPilot.get()) mc.options.forwardKey.setPressed(false);
 
         if (chestSwap.get() == ChestSwapMode.Always && mc.player.getEquippedStack(EquipmentSlot.CHEST).getItem() == Items.ELYTRA) {
             Modules.get().get(ChestSwap.class).swap();
@@ -278,7 +299,7 @@ public class ElytraFly extends Module {
             currentMode.onPlayerMove();
         } else {
             if (currentMode.lastForwardPressed) {
-                mc.options.keyForward.setPressed(false);
+                mc.options.forwardKey.setPressed(false);
                 currentMode.lastForwardPressed = false;
             }
         }
@@ -305,12 +326,12 @@ public class ElytraFly extends Module {
 
     private void onModeChanged(ElytraFlightModes mode) {
         switch (mode) {
-            case Vanilla:   currentMode = new Vanilla(); break;
-            case Packet:    currentMode = new Packet(); break;
-            case Pitch40:
+            case Vanilla -> currentMode = new Vanilla();
+            case Packet -> currentMode = new Packet();
+            case Pitch40 -> {
                 currentMode = new Pitch40();
                 autoPilot.set(false); // Pitch 40 is an autopilot of its own
-                break;
+            }
         }
     }
 

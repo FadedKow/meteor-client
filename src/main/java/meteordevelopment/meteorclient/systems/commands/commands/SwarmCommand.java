@@ -13,6 +13,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import meteordevelopment.meteorclient.systems.commands.Command;
+import meteordevelopment.meteorclient.systems.commands.Commands;
 import meteordevelopment.meteorclient.systems.commands.arguments.ModuleArgumentType;
 import meteordevelopment.meteorclient.systems.commands.arguments.PlayerArgumentType;
 import meteordevelopment.meteorclient.systems.modules.Module;
@@ -26,15 +27,16 @@ import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.BlockStateArgument;
 import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 
+import java.util.List;
 import java.util.Random;
 
 import static com.mojang.brigadier.Command.SINGLE_SUCCESS;
 
 public class SwarmCommand extends Command {
 
-    private final static SimpleCommandExceptionType SWARM_NOT_ACTIVE = new SimpleCommandExceptionType(new LiteralText("The swarm module must be active to use this command."));
+    private final static SimpleCommandExceptionType SWARM_NOT_ACTIVE = new SimpleCommandExceptionType(Text.literal("The swarm module must be active to use this command."));
 
     public SwarmCommand() {
         super("swarm", "Sends commands to connected swarm workers.");
@@ -170,14 +172,14 @@ public class SwarmCommand extends Command {
             }
             return SINGLE_SUCCESS;
         })
-        .then(argument("target", BlockStateArgumentType.blockState()).executes(context -> {
+        .then(argument("target", BlockStateArgumentType.blockState(Commands.REGISTRY_ACCESS)).executes(context -> {
             Swarm swarm = Modules.get().get(Swarm.class);
             if (swarm.isActive()) {
                 if (swarm.isHost()) {
                     swarm.host.sendMessage(context.getInput());
                 }
                 else if (swarm.isWorker()) {
-                    Modules.get().get(InfinityMiner.class).targetBlock.set(context.getArgument("target", BlockStateArgument.class).getBlockState().getBlock());
+                    Modules.get().get(InfinityMiner.class).targetBlocks.set(List.of(context.getArgument("target", BlockStateArgument.class).getBlockState().getBlock()));
                     runInfinityMiner();
                 }
             }
@@ -186,15 +188,15 @@ public class SwarmCommand extends Command {
             }
             return SINGLE_SUCCESS;
         })
-        .then(argument("repair", BlockStateArgumentType.blockState()).executes(context -> {
+        .then(argument("repair", BlockStateArgumentType.blockState(Commands.REGISTRY_ACCESS)).executes(context -> {
             Swarm swarm = Modules.get().get(Swarm.class);
             if (swarm.isActive()) {
                 if (swarm.isHost()) {
                     swarm.host.sendMessage(context.getInput());
                 }
                 else if (swarm.isWorker()) {
-                    Modules.get().get(InfinityMiner.class).targetBlock.set(context.getArgument("target", BlockStateArgument.class).getBlockState().getBlock());
-                    Modules.get().get(InfinityMiner.class).repairBlock.set(context.getArgument("repair", BlockStateArgument.class).getBlockState().getBlock());
+                    Modules.get().get(InfinityMiner.class).targetBlocks.set(List.of(context.getArgument("target", BlockStateArgument.class).getBlockState().getBlock()));
+                    Modules.get().get(InfinityMiner.class).repairBlocks.set(List.of(context.getArgument("repair", BlockStateArgument.class).getBlockState().getBlock()));
                     runInfinityMiner();
                 }
             }
@@ -210,7 +212,7 @@ public class SwarmCommand extends Command {
                     swarm.host.sendMessage(context.getInput());
                 }
                 else if (swarm.isWorker()) {
-                    Modules.get().get(InfinityMiner.class).autoLogOut.set(BoolArgumentType.getBool(context, "logout"));
+                    Modules.get().get(InfinityMiner.class).logOut.set(BoolArgumentType.getBool(context, "logout"));
                 }
             }
             else {
@@ -224,7 +226,7 @@ public class SwarmCommand extends Command {
                 if (swarm.isHost()) {
                     swarm.host.sendMessage(context.getInput());
                 } else if (swarm.isWorker()) {
-                    Modules.get().get(InfinityMiner.class).autoWalkHome.set(BoolArgumentType.getBool(context, "walkhome"));
+                    Modules.get().get(InfinityMiner.class).walkHome.set(BoolArgumentType.getBool(context, "walkhome"));
                 }
             } else {
                 throw SWARM_NOT_ACTIVE.create();
@@ -233,7 +235,7 @@ public class SwarmCommand extends Command {
         }))));
 
         builder.then(literal("mine")
-                .then(argument("block", BlockStateArgumentType.blockState()).executes(context -> {
+                .then(argument("block", BlockStateArgumentType.blockState(Commands.REGISTRY_ACCESS)).executes(context -> {
                     Swarm swarm = Modules.get().get(Swarm.class);
                     if (swarm.isActive()) {
                         if (swarm.isHost()) {
@@ -354,7 +356,7 @@ public class SwarmCommand extends Command {
     private void runInfinityMiner() {
         InfinityMiner infinityMiner = Modules.get().get(InfinityMiner.class);
         if (infinityMiner.isActive()) infinityMiner.toggle();
-        infinityMiner.smartModuleToggle.set(true);
+//        infinityMiner.smartModuleToggle.set(true);
         if (!infinityMiner.isActive()) infinityMiner.toggle();
     }
 

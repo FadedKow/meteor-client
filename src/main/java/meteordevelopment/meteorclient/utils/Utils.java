@@ -22,7 +22,7 @@ import meteordevelopment.meteorclient.utils.player.EChestMemory;
 import meteordevelopment.meteorclient.utils.render.PeekScreen;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.world.BlockEntityIterator;
-import meteordevelopment.meteorclient.utils.world.WorldChunkIterator;
+import meteordevelopment.meteorclient.utils.world.ChunkIterator;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -32,8 +32,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.screen.world.SelectWorldScreen;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.client.option.ServerList;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.*;
@@ -46,13 +44,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.Chunk;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
+import org.jetbrains.annotations.Range;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
@@ -68,7 +66,6 @@ public class Utils {
     public static final Color WHITE = new Color(255, 255, 255);
     public static boolean rendering3D = true;
     public static boolean renderingEntityOutline = false;
-    public static int minimumLightLevel;
     public static double frameTime;
     public static Screen screenToOpen;
 
@@ -108,8 +105,12 @@ public class Utils {
         return String.format("%02d:%02d", ticks / 1000, (int) (ticks % 1000 / 1000.0 * 60));
     }
 
-    public static Iterable<WorldChunk> chunks() {
-        return WorldChunkIterator::new;
+    public static Iterable<Chunk> chunks(boolean onlyWithLoadedNeighbours) {
+        return () -> new ChunkIterator(onlyWithLoadedNeighbours);
+    }
+
+    public static Iterable<Chunk> chunks() {
+        return chunks(false);
     }
 
     public static Iterable<BlockEntity> blockEntities() {
@@ -130,28 +131,18 @@ public class Utils {
         }
     }
 
-    public static int getRenderDistance() {
-        return Math.max(mc.options.viewDistance, ((ClientPlayNetworkHandlerAccessor) mc.getNetworkHandler()).getChunkLoadDistance());
+    public static boolean hasEnchantments(ItemStack itemStack, Enchantment... enchantments) {
+        if (itemStack.isEmpty()) return false;
+
+        Object2IntMap<Enchantment> itemEnchantments = new Object2IntArrayMap<>();
+        getEnchantments(itemStack, itemEnchantments);
+        for (Enchantment enchantment : enchantments) if (!itemEnchantments.containsKey(enchantment)) return false;
+
+        return true;
     }
 
-    public static void addMeteorPvpToServerList() {
-        ServerList servers = new ServerList(mc);
-        servers.loadFile();
-
-        boolean contains = false;
-        for (int i = 0; i < servers.size(); i++) {
-            ServerInfo server = servers.get(i);
-
-            if (server.address.contains("pvp.meteorclient.com")) {
-                contains = true;
-                break;
-            }
-        }
-
-        if (!contains) {
-            servers.add(new ServerInfo("Meteor Pvp", "pvp.meteorclient.com", false));
-            servers.saveFile();
-        }
+    public static int getRenderDistance() {
+        return Math.max(mc.options.getViewDistance().getValue(), ((ClientPlayNetworkHandlerAccessor) mc.getNetworkHandler()).getChunkLoadDistance());
     }
 
     public static int getWindowWidth() {
@@ -192,6 +183,7 @@ public class Utils {
             for (int i = 0; i < EChestMemory.ITEMS.size(); i++) {
                 items[i] = EChestMemory.ITEMS.get(i);
             }
+
             return;
         }
 
@@ -200,10 +192,13 @@ public class Utils {
 
         if (nbt != null && nbt.contains("BlockEntityTag")) {
             NbtCompound nbt2 = nbt.getCompound("BlockEntityTag");
+
             if (nbt2.contains("Items")) {
                 NbtList nbt3 = (NbtList) nbt2.get("Items");
+
                 for (int i = 0; i < nbt3.size(); i++) {
-                    items[nbt3.getCompound(i).getByte("Slot")] = ItemStack.fromNbt(nbt3.getCompound(i));
+                    int slot = nbt3.getCompound(i).getByte("Slot"); // Apparently shulker boxes can store more than 27 items, good job Mojang
+                    if (slot >= 0 && slot < items.length) items[slot] = ItemStack.fromNbt(nbt3.getCompound(i));
                 }
             }
         }
@@ -270,7 +265,7 @@ public class Utils {
     public static String getWorldName() {
         if (mc.isInSingleplayer()) {
             // Singleplayer
-            File folder = ((MinecraftServerAccessor) mc.getServer()).getSession().getWorldDirectory(mc.world.getRegistryKey());
+            File folder = ((MinecraftServerAccessor) mc.getServer()).getSession().getWorldDirectory(mc.world.getRegistryKey()).toFile();
             if (folder.toPath().relativize(mc.runDirectory.toPath()).getNameCount() != 2) {
                 folder = folder.getParentFile();
             }
@@ -371,9 +366,8 @@ public class Utils {
         };
     }
 
-    public static byte[] readBytes(File file) {
+    public static byte[] readBytes(InputStream in) {
         try {
-            InputStream in = new FileInputStream(file);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
             byte[] buffer = new byte[256];
@@ -393,7 +387,7 @@ public class Utils {
         return mc != null && mc.world != null && mc.player != null;
     }
 
-    public static boolean canOpenClickGUI() {
+    public static boolean canOpenGui() {
         if (canUpdate()) return mc.currentScreen == null;
 
         return mc.currentScreen instanceof TitleScreen || mc.currentScreen instanceof MultiplayerScreen || mc.currentScreen instanceof SelectWorldScreen;
@@ -408,9 +402,9 @@ public class Utils {
     }
 
     public static void leftClick() {
-        mc.options.keyAttack.setPressed(true);
+        mc.options.attackKey.setPressed(true);
         ((MinecraftClientAccessor) mc).leftClick();
-        mc.options.keyAttack.setPressed(false);
+        mc.options.attackKey.setPressed(false);
     }
 
     public static void rightClick() {
@@ -502,5 +496,13 @@ public class Utils {
         for (T item : checked)
             map.put(item, true);
         return new Object2BooleanOpenHashMap<>(map);
+    }
+
+    public static Color lerp(Color first, Color second, @Range(from = 0, to = 1) float v) {
+        return new Color(
+            (int) (first.r * (1 - v) + second.r * v),
+            (int) (first.g * (1 - v) + second.g * v),
+            (int) (first.b * (1 - v) + second.b * v)
+        );
     }
 }

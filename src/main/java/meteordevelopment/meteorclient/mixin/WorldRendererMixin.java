@@ -46,7 +46,7 @@ public abstract class WorldRendererMixin {
         if (Modules.get().isActive(BlockSelection.class)) info.cancel();
     }
 
-    @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;setupTerrain(Lnet/minecraft/client/render/Camera;Lnet/minecraft/client/render/Frustum;ZIZ)V"), index = 4)
+    @ModifyArg(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;setupTerrain(Lnet/minecraft/client/render/Camera;Lnet/minecraft/client/render/Frustum;ZZ)V"), index = 3)
     private boolean renderSetupTerrainModifyArg(boolean spectator) {
         return Modules.get().isActive(Freecam.class) || spectator;
     }
@@ -55,8 +55,6 @@ public abstract class WorldRendererMixin {
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onRenderHead(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f, CallbackInfo info) {
-        Utils.minimumLightLevel = Modules.get().get(Fullbright.class).getMinimumLightLevel();
-
         EntityShaders.beginRender();
     }
 
@@ -114,12 +112,12 @@ public abstract class WorldRendererMixin {
     private void onRenderEndSkyDraw(MatrixStack matrices, CallbackInfo info) {
         Ambience ambience = Modules.get().get(Ambience.class);
 
-        if (ambience.endSky.get() && ambience.customSkyColor.get()) {
-            Color customEndSkyColor = ambience.skyColor.get();
+        if (ambience.isActive() && ambience.endSky.get() && ambience.customSkyColor.get()) {
+            Color customEndSkyColor = ambience.skyColor();
 
             Tessellator tessellator = Tessellator.getInstance();
             BufferBuilder bufferBuilder = tessellator.getBuffer();
-            Matrix4f matrix4f = matrices.peek().getModel();
+            Matrix4f matrix4f = matrices.peek().getPositionMatrix();
 
             bufferBuilder.clear();
 
@@ -130,8 +128,8 @@ public abstract class WorldRendererMixin {
         }
     }
 
-    @ModifyVariable(method = "getLightmapCoordinates(Lnet/minecraft/world/BlockRenderView;Lnet/minecraft/block/BlockState;Lnet/minecraft/util/math/BlockPos;)I", at = @At(value = "STORE", ordinal = 0))
+    @ModifyVariable(method = "getLightmapCoordinates(Lnet/minecraft/world/BlockRenderView;Lnet/minecraft/block/BlockState;Lnet/minecraft/util/math/BlockPos;)I", at = @At(value = "STORE"), ordinal = 0)
     private static int getLightmapCoordinatesModifySkyLight(int sky) {
-        return Math.max(Utils.minimumLightLevel, sky);
+        return Math.max(Modules.get().get(Fullbright.class).getLuminance(), sky);
     }
 }

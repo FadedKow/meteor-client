@@ -49,6 +49,16 @@ public class MacrosTab extends Tab {
         }
 
         @Override
+        protected void init() {
+            super.init();
+
+            if (!firstInit) {
+                clear();
+                initWidgets();
+            }
+        }
+
+        @Override
         public void initWidgets() {
             // Macros
             if (Macros.get().getAll().size() > 0) {
@@ -133,11 +143,11 @@ public class MacrosTab extends Tab {
                 if (isNew) {
                     if (macro.name != null && !macro.name.isEmpty() && macro.messages.size() > 0 && macro.keybind.isSet()) {
                         Macros.get().add(macro);
-                        onClose();
+                        close();
                     }
                 } else {
                     Macros.get().save();
-                    onClose();
+                    close();
                 }
             };
 
